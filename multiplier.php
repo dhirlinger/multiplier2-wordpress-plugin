@@ -216,6 +216,7 @@ function multiplier_get_login_status(WP_REST_Request $request)
 {
     $is_logged_in = is_user_logged_in();
     $is_admin     = current_user_can('manage_options');
+    $user_id = get_current_user_id();
 
     $status = [
         'logged_in'         => (bool) $is_logged_in,
@@ -225,6 +226,7 @@ function multiplier_get_login_status(WP_REST_Request $request)
         'patreon_tier_cents' => null,
         'patreon_user_id'   => null,
         'patreon_email'     => null,
+        'user_id'           => $user_id,
     ];
 
     if ($is_admin) {
