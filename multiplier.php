@@ -60,6 +60,7 @@ function multiplier_setup_table()
 
     $sql = "
         CREATE TABLE $index_array_table (
+            preset_number   SMALLINT UNSIGNED NOT NULL,  
             array_id mediumint(9) NOT NULL AUTO_INCREMENT,
             array_name VARCHAR(50) NOT NULL,
             index_array VARCHAR(25) NOT NULL,
@@ -69,6 +70,7 @@ function multiplier_setup_table()
         ) $charset_collate;
 
         CREATE TABLE $freq_array_table (
+            preset_number   SMALLINT UNSIGNED NOT NULL,
             array_id mediumint(9) NOT NULL AUTO_INCREMENT,
             array_name VARCHAR(50) NOT NULL,
             base_freq DOUBLE,
@@ -79,6 +81,7 @@ function multiplier_setup_table()
         ) $charset_collate;
 
         CREATE TABLE $preset_table (
+            preset_number   SMALLINT UNSIGNED NOT NULL,
             preset_id mediumint(9) NOT NULL AUTO_INCREMENT,
             name VARCHAR(25),
             tempo INT NOT NULL,
