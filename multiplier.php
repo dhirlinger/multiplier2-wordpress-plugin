@@ -84,19 +84,9 @@ function multiplier_setup_table()
             preset_number   SMALLINT UNSIGNED NOT NULL,
             preset_id mediumint(9) NOT NULL AUTO_INCREMENT,
             name VARCHAR(25),
-            tempo INT NOT NULL,
-            waveshape VARCHAR(25) NOT NULL,
-            duration DOUBLE NOT NULL,
-            lowpass_freq INT NOT NULL,
-            lowpass_q INT NOT NULL,
+            params_json   JSON NOT NULL,
             index_array_id mediumint(9)  NOT NULL,
             freq_array_id mediumint(9)  NOT NULL,
-            multiplier_min DOUBLE NOT NULL,
-            multiplier_max DOUBLE NOT NULL,
-            multiplier_step DOUBLE NOT NULL,
-            base_min DOUBLE NOT NULL,
-            base_max DOUBLE NOT NULL,
-            base_step DOUBLE NOT NULL,
             user_id smallint(9) NOT NULL,
             PRIMARY KEY (preset_id),
             KEY  index_array_id (index_array_id),
@@ -410,19 +400,20 @@ function multiplier_create_preset(WP_REST_Request $request)
 
     $row = [
         'name'            => isset($d['name']) ? sanitize_text_field($d['name']) : null,
-        'tempo'           => isset($d['tempo']) ? intval($d['tempo']) : null,
-        'waveshape'       => isset($d['waveshape']) ? sanitize_text_field($d['waveshape']) : null,
-        'duration'        => isset($d['duration']) ? floatval($d['duration']) : null,
-        'lowpass_freq'    => isset($d['lowpass_freq']) ? intval($d['lowpass_freq']) : null,
-        'lowpass_q'       => isset($d['lowpass_q']) ? intval($d['lowpass_q']) : null,
+        // 'tempo'           => isset($d['tempo']) ? intval($d['tempo']) : null,
+        // 'waveshape'       => isset($d['waveshape']) ? sanitize_text_field($d['waveshape']) : null,
+        // 'duration'        => isset($d['duration']) ? floatval($d['duration']) : null,
+        // 'lowpass_freq'    => isset($d['lowpass_freq']) ? intval($d['lowpass_freq']) : null,
+        // 'lowpass_q'       => isset($d['lowpass_q']) ? intval($d['lowpass_q']) : null,
         'index_array_id'  => isset($d['index_array_id']) ? intval($d['index_array_id']) : null,
         'freq_array_id'   => isset($d['freq_array_id']) ? intval($d['freq_array_id']) : null,
-        'multiplier_min'  => isset($d['multiplier_min']) ? floatval($d['multiplier_min']) : null,
-        'multiplier_max'  => isset($d['multiplier_max']) ? floatval($d['multiplier_max']) : null,
-        'multiplier_step' => isset($d['multiplier_step']) ? floatval($d['multiplier_step']) : null,
-        'base_min'        => isset($d['base_min']) ? floatval($d['base_min']) : null,
-        'base_max'        => isset($d['base_max']) ? floatval($d['base_max']) : null,
-        'base_step'       => isset($d['base_step']) ? floatval($d['base_step']) : null,
+        // 'multiplier_min'  => isset($d['multiplier_min']) ? floatval($d['multiplier_min']) : null,
+        // 'multiplier_max'  => isset($d['multiplier_max']) ? floatval($d['multiplier_max']) : null,
+        // 'multiplier_step' => isset($d['multiplier_step']) ? floatval($d['multiplier_step']) : null,
+        // 'base_min'        => isset($d['base_min']) ? floatval($d['base_min']) : null,
+        // 'base_max'        => isset($d['base_max']) ? floatval($d['base_max']) : null,
+        // 'base_step'       => isset($d['base_step']) ? floatval($d['base_step']) : null,
+        'params_json'     => isset($d['params_json']) ? wp_json_encode($d['params_json']) : null,
         'user_id'         => isset($d['user_id']) ? intval($d['user_id']) : multiplier_current_user_id(),
     ];
 
@@ -450,5 +441,13 @@ function multiplier_get_presets(WP_REST_Request $request)
     global $wpdb;
     $table = $wpdb->prefix . 'multiplier_preset';
     $id = intval($request['id']);
-    return $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE user_id = %d", $id));
+    //return $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE user_id = %d", $id));
+    $results = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE user_id = %d", $id));
+    // Ensure JSON gets decoded for output
+    foreach ($results as $row) {
+        if (isset($row->params_json)) {
+            $row->params_json = json_decode($row->params_json, true);
+        }
+    }
+    return $results;
 }
