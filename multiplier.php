@@ -441,9 +441,8 @@ function multiplier_get_presets(WP_REST_Request $request)
     global $wpdb;
     $table = $wpdb->prefix . 'multiplier_preset';
     $id = intval($request['id']);
-    //return $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE user_id = %d", $id));
     $results = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE user_id = %d", $id));
-    // Ensure JSON gets decoded for output
+    // decode JSON for output
     foreach ($results as $row) {
         if (isset($row->params_json)) {
             $row->params_json = json_decode($row->params_json, true);
