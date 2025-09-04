@@ -357,10 +357,11 @@ function multiplier_create_index_array(WP_REST_Request $request)
 
     $index_array = isset($data['index_array']) ? sanitize_text_field($data['index_array']) : '';
     $array_name  = isset($data['array_name']) ? sanitize_text_field($data['array_name']) : '';
+    $preset_number = isset($data['preset_number']) ? intval($data['preset_number']) : '';
     $user_id     = isset($data['user_id']) ? intval($data['user_id']) : multiplier_current_user_id();
 
-    if ($index_array === '' || $array_name === '' || !$user_id) {
-        return new WP_Error('missing_data', 'Required fields: index_array, array_name, user_id', ['status' => 400]);
+    if ($index_array === '' || $array_name === '' || $preset_number === '' || !$user_id) {
+        return new WP_Error('missing_data', 'Required fields: index_array, array_name, preset_number, user_id', ['status' => 400]);
     }
 
     $ok = $wpdb->insert(
@@ -368,9 +369,10 @@ function multiplier_create_index_array(WP_REST_Request $request)
         [
             'index_array' => $index_array,
             'array_name'  => $array_name,
+            'preset_number' => $preset_number,
             'user_id'     => $user_id,
         ],
-        ['%s', '%s', '%d']
+        ['%s', '%s', '%d', '%d']
     );
 
     if ($ok === false) {
