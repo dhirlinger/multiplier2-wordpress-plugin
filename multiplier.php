@@ -379,7 +379,8 @@ function multiplier_create_index_array(WP_REST_Request $request)
         return new WP_Error('db_insert_error', 'Could not insert index array', ['status' => 500]);
     }
 
-    return ['success' => true, 'array_id' => (int) $wpdb->insert_id];
+    $updated_data =  $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE user_id = %d", $user_id));
+    return ['success' => true, 'array_id' => (int) $wpdb->insert_id, 'updated_data' => $updated_data];
 }
 
 function multiplier_get_index_array(WP_REST_Request $request)
