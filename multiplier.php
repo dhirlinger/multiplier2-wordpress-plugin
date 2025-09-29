@@ -403,19 +403,10 @@ function multiplier_create_preset(WP_REST_Request $request)
 
     $row = [
         'name'            => isset($d['name']) ? sanitize_text_field($d['name']) : null,
-        // 'tempo'           => isset($d['tempo']) ? intval($d['tempo']) : null,
-        // 'waveshape'       => isset($d['waveshape']) ? sanitize_text_field($d['waveshape']) : null,
-        // 'duration'        => isset($d['duration']) ? floatval($d['duration']) : null,
-        // 'lowpass_freq'    => isset($d['lowpass_freq']) ? intval($d['lowpass_freq']) : null,
-        // 'lowpass_q'       => isset($d['lowpass_q']) ? intval($d['lowpass_q']) : null,
+
         'index_array_id'  => isset($d['index_array_id']) ? intval($d['index_array_id']) : null,
         'freq_array_id'   => isset($d['freq_array_id']) ? intval($d['freq_array_id']) : null,
-        // 'multiplier_min'  => isset($d['multiplier_min']) ? floatval($d['multiplier_min']) : null,
-        // 'multiplier_max'  => isset($d['multiplier_max']) ? floatval($d['multiplier_max']) : null,
-        // 'multiplier_step' => isset($d['multiplier_step']) ? floatval($d['multiplier_step']) : null,
-        // 'base_min'        => isset($d['base_min']) ? floatval($d['base_min']) : null,
-        // 'base_max'        => isset($d['base_max']) ? floatval($d['base_max']) : null,
-        // 'base_step'       => isset($d['base_step']) ? floatval($d['base_step']) : null,
+
         'params_json'     => isset($d['params_json']) ? wp_json_encode($d['params_json']) : null,
         'user_id'         => isset($d['user_id']) ? intval($d['user_id']) : multiplier_current_user_id(),
     ];
@@ -429,13 +420,15 @@ function multiplier_create_preset(WP_REST_Request $request)
     $ok = $wpdb->insert(
         $table,
         $row,
-        ['%s', '%d', '%s', '%f', '%d', '%d', '%d', '%d', '%f', '%f', '%f', '%f', '%f', '%f', '%d']
+        ['%s', '%d', '%d', '%s', '%d']
     );
 
     if ($ok === false) {
         return new WP_Error('db_insert_error', 'Could not insert preset', ['status' => 500]);
     }
 
+    $updated_data =  $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE user_id = %d", $row["user_id"]));
+    return ['success' => true, 'array_id' => (int) $wpdb->insert_id, 'updated_data' => $updated_data];
     return ['success' => true, 'preset_id' => (int) $wpdb->insert_id];
 }
 
