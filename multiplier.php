@@ -403,7 +403,7 @@ function multiplier_create_preset(WP_REST_Request $request)
 
     $row = [
         'name'            => isset($d['name']) ? sanitize_text_field($d['name']) : null,
-
+        'preset_number'   => isset($d['preset_number']) ? sanitize_text_field($d['preset_number']) : null,
         'index_array_id'  => isset($d['index_array_id']) ? intval($d['index_array_id']) : null,
         'freq_array_id'   => isset($d['freq_array_id']) ? intval($d['freq_array_id']) : null,
 
@@ -420,7 +420,7 @@ function multiplier_create_preset(WP_REST_Request $request)
     $ok = $wpdb->insert(
         $table,
         $row,
-        ['%s', '%d', '%d', '%s', '%d']
+        ['%s', '%d', '%d', '%d', '%s', '%d']
     );
 
     if ($ok === false) {
