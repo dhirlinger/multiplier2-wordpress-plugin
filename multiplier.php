@@ -200,6 +200,11 @@ add_action('rest_api_init', function () {
         'callback' => 'multiplier_get_presets',
         'permission_callback' => '__return_true',
     ]);
+    register_rest_route('multiplier-api/v1', '/presets/delete/(?P<id>\d+)', [
+        'methods' => 'DELETE',
+        'callback' => 'multiplier_delete_preset',
+        'permission_callback' => 'multiplier_verify_nonce_permission',
+    ]);
 });
 
 /* ------------------------------------------------------------
@@ -470,9 +475,26 @@ function multiplier_get_presets(WP_REST_Request $request)
     return $results;
 }
 
-function multiplier_delete_presets(WP_REST_Request $request)
+function multiplier_delete_preset(WP_REST_Request $request)
 {
-    global $wpdb;
-    $table = $wpdb->prefix . 'multiplier_preset';
-    $id = intval($request['id']);
+    if (is_user_logged_in()) {
+        $current_user_id = get_current_user_id();
+        global $wpdb;
+        $table = $wpdb->prefix . 'multiplier_preset';
+        $id = intval($request['id']);
+
+        $wpdb->delete($table, array('preset_id' => $id), array('%d'));
+
+        $updated_data =  $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE user_id = %d", $current_user_id));
+
+        foreach ($updated_data as $row) {
+            if (isset($row->params_json)) {
+                $row->params_json = json_decode($row->params_json, true);
+            }
+        }
+
+        return ['success' => true, 'updated_data' => $updated_data];
+    }
+
+    return ['user_logged_in' => false];
 }
