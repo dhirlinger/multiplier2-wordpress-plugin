@@ -423,9 +423,17 @@ function multiplier_create_preset(WP_REST_Request $request)
     }
 
     $selected_preset_number = $row["preset_number"];
-    $contains_preset_number = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE preset_number = %d", $selected_preset_number));
+    $selected_user_id = $row['user_id'];
+    $contains_preset_number = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE preset_number = %d AND user_id = %d", $selected_preset_number, $selected_user_id));
+    $selected_user_id = $row['user_id'];
 
-    if ($contains_preset_number->preset_number != $selected_preset_number) {
+    $have_same_preset_num = $contains_preset_number->preset_number == $selected_preset_number;
+    $have_same_user = $contains_preset_number->user_id == $selected_user_id;
+    $have_same_preset_num_and_different_user = $have_same_preset_num && !$have_same_user;
+    $check = 0;
+
+    if (!$have_same_preset_num) {
+        $check = 1;
         $ok = $wpdb->insert(
             $table,
             $row,
@@ -435,8 +443,10 @@ function multiplier_create_preset(WP_REST_Request $request)
         if ($ok === false) {
             return new WP_Error('db_insert_error', 'Could not insert preset', ['status' => 500]);
         }
-    } else if ($contains_preset_number->preset_number == $selected_preset_number) {
-        $where = array('preset_number' => $selected_preset_number);
+    } else if ($have_same_preset_num) {
+        $check = 2;
+
+        $where = array('preset_number' => $selected_preset_number, 'user_id' => $selected_user_id);
 
         $ok = $wpdb->update(
             $table,
@@ -457,7 +467,7 @@ function multiplier_create_preset(WP_REST_Request $request)
         }
     }
 
-    return ['success' => true, 'array_id' => (int) $wpdb->insert_id, 'updated_data' => $updated_data];
+    return ['row' => $contains_preset_number, 'check' => $check, 'success' => true, 'array_id' => (int) $wpdb->insert_id, 'updated_data' => $updated_data];
 }
 
 function multiplier_get_presets(WP_REST_Request $request)
