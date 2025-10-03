@@ -419,11 +419,8 @@ function multiplier_create_preset(WP_REST_Request $request)
 
     $selected_preset_number = $row["preset_number"];
     $contains_preset_number = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE preset_number = %d", $selected_preset_number));
-    $branch = 0;
-    $eval = $contains_preset_number->preset_number == $selected_preset_number;
 
     if ($contains_preset_number->preset_number != $selected_preset_number) {
-        $branch = 1;
         $ok = $wpdb->insert(
             $table,
             $row,
@@ -434,7 +431,6 @@ function multiplier_create_preset(WP_REST_Request $request)
             return new WP_Error('db_insert_error', 'Could not insert preset', ['status' => 500]);
         }
     } else if ($contains_preset_number->preset_number == $selected_preset_number) {
-        $branch = 2;
         $where = array('preset_number' => $selected_preset_number);
 
         $ok = $wpdb->update(
@@ -456,9 +452,7 @@ function multiplier_create_preset(WP_REST_Request $request)
         }
     }
 
-    return ['cont' => $contains_preset_number->preset_number, 'success' => true, 'array_id' => (int) $wpdb->insert_id, 'updated_data' => $updated_data];
-    // return ['success' => true, 'preset_id' => (int) $wpdb->insert_id];
-    // return ['var' => $selected_preset_number];
+    return ['success' => true, 'array_id' => (int) $wpdb->insert_id, 'updated_data' => $updated_data];
 }
 
 function multiplier_get_presets(WP_REST_Request $request)
@@ -474,4 +468,11 @@ function multiplier_get_presets(WP_REST_Request $request)
         }
     }
     return $results;
+}
+
+function multiplier_delete_presets(WP_REST_Request $request)
+{
+    global $wpdb;
+    $table = $wpdb->prefix . 'multiplier_preset';
+    $id = intval($request['id']);
 }
