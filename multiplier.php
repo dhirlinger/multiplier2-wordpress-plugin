@@ -62,7 +62,7 @@ function multiplier_setup_table()
         CREATE TABLE $index_array_table (
             preset_number   SMALLINT UNSIGNED NOT NULL,  
             array_id mediumint(9) NOT NULL AUTO_INCREMENT,
-            array_name VARCHAR(50) NOT NULL,
+            name VARCHAR(50) NOT NULL,
             index_array VARCHAR(25) NOT NULL,
             user_id smallint(9) NOT NULL,
             PRIMARY KEY  (array_id),
@@ -72,7 +72,7 @@ function multiplier_setup_table()
         CREATE TABLE $freq_array_table (
             preset_number   SMALLINT UNSIGNED NOT NULL,
             array_id mediumint(9) NOT NULL AUTO_INCREMENT,
-            array_name VARCHAR(50) NOT NULL,
+            name VARCHAR(50) NOT NULL,
             base_freq DOUBLE,
             multiplier DOUBLE,
             user_id smallint(9) NOT NULL,
@@ -123,7 +123,7 @@ function multiplier_install_data()
                 'array_id'   => 1,
                 'base_freq'  => 110,
                 'multiplier' => 2,
-                'array_name' => 'DEFAULT',
+                'name' => 'DEFAULT',
                 'user_id'    => 1,
             ],
             ['%d', '%f', '%f', '%s', '%d']
@@ -315,19 +315,19 @@ function multiplier_create_freq_array(WP_REST_Request $request)
 
     $data = $request->get_json_params();
 
-    $array_name = isset($data['array_name']) ? sanitize_text_field($data['array_name']) : '';
+    $name = isset($data['name']) ? sanitize_text_field($data['name']) : '';
     $base_freq  = isset($data['base_freq']) ? floatval($data['base_freq']) : null;
     $multiplier = isset($data['multiplier']) ? floatval($data['multiplier']) : null;
     $user_id    = isset($data['user_id']) ? intval($data['user_id']) : multiplier_current_user_id();
 
-    if ($array_name === '' || $base_freq === null || $multiplier === null || !$user_id) {
-        return new WP_Error('missing_data', 'Required fields: array_name, base_freq, multiplier, user_id', ['status' => 400]);
+    if ($name === '' || $base_freq === null || $multiplier === null || !$user_id) {
+        return new WP_Error('missing_data', 'Required fields: name, base_freq, multiplier, user_id', ['status' => 400]);
     }
 
     $ok = $wpdb->insert(
         $table,
         [
-            'array_name' => $array_name,
+            'name' => $name,
             'base_freq'  => $base_freq,
             'multiplier' => $multiplier,
             'user_id'    => $user_id,
@@ -361,19 +361,19 @@ function multiplier_create_index_array(WP_REST_Request $request)
     $data = $request->get_json_params();
 
     $index_array = isset($data['index_array']) ? sanitize_text_field($data['index_array']) : '';
-    $array_name  = isset($data['array_name']) ? sanitize_text_field($data['array_name']) : '';
+    $name  = isset($data['name']) ? sanitize_text_field($data['name']) : '';
     $preset_number = isset($data['preset_number']) ? intval($data['preset_number']) : '';
     $user_id     = isset($data['user_id']) ? intval($data['user_id']) : multiplier_current_user_id();
 
-    if ($index_array === '' || $array_name === '' || $preset_number === '' || !$user_id) {
-        return new WP_Error('missing_data', 'Required fields: index_array, array_name, preset_number, user_id', ['status' => 400]);
+    if ($index_array === '' || $name === '' || $preset_number === '' || !$user_id) {
+        return new WP_Error('missing_data', 'Required fields: index_array, name, preset_number, user_id', ['status' => 400]);
     }
 
     $ok = $wpdb->insert(
         $table,
         [
             'index_array' => $index_array,
-            'array_name'  => $array_name,
+            'name'  => $name,
             'preset_number' => $preset_number,
             'user_id'     => $user_id,
         ],
