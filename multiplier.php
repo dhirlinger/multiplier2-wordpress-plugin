@@ -315,31 +315,62 @@ function multiplier_create_freq_array(WP_REST_Request $request)
 
     $data = $request->get_json_params();
 
-    $name = isset($data['name']) ? sanitize_text_field($data['name']) : '';
-    $base_freq  = isset($data['base_freq']) ? floatval($data['base_freq']) : null;
-    $multiplier = isset($data['multiplier']) ? floatval($data['multiplier']) : null;
-    $user_id    = isset($data['user_id']) ? intval($data['user_id']) : multiplier_current_user_id();
+    $row = [
+        'name'            => isset($data['name']) ? sanitize_text_field($data['name']) : null,
+        'preset_number'   => isset($data['preset_number']) ? sanitize_text_field($data['preset_number']) : null,
+        'base_freq'  => isset($data['base_freq']) ? floatval($data['base_freq']) : null,
+        'multiplier'   => isset($data['multiplier']) ? floatval($data['multiplier']) : null,
+        'user_id'         => isset($data['user_id']) ? intval($data['user_id']) : multiplier_current_user_id(),
+    ];
 
-    if ($name === '' || $base_freq === null || $multiplier === null || !$user_id) {
-        return new WP_Error('missing_data', 'Required fields: name, base_freq, multiplier, user_id', ['status' => 400]);
+    foreach ($row as $k => $v) {
+        if ($v === null) {
+            return new WP_Error('missing_data', 'Missing field: ' . $k, ['status' => 400]);
+        }
     }
 
-    $ok = $wpdb->insert(
-        $table,
-        [
-            'name' => $name,
-            'base_freq'  => $base_freq,
-            'multiplier' => $multiplier,
-            'user_id'    => $user_id,
-        ],
-        ['%s', '%f', '%f', '%d']
-    );
+    $selected_preset_number = $row["preset_number"];
+    $selected_user_id = $row['user_id'];
+    $contains_preset_number = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE preset_number = %d AND user_id = %d", $selected_preset_number, $selected_user_id));
+    $selected_user_id = $row['user_id'];
 
-    if ($ok === false) {
-        return new WP_Error('db_insert_error', 'Could not insert frequency array', ['status' => 500]);
+    $have_same_preset_num = $contains_preset_number->preset_number == $selected_preset_number;
+    $have_same_user = $contains_preset_number->user_id == $selected_user_id;
+
+    if (!$have_same_preset_num) {
+        $ok = $wpdb->insert(
+            $table,
+            $row,
+            ['%s', '%d', '%f', '%f', '%d']
+        );
+
+        if ($ok === false) {
+            return new WP_Error('db_insert_error', 'Could not insert frequency array', ['status' => 500]);
+        }
+    } else if ($have_same_preset_num) {
+
+        $where = array('preset_number' => $selected_preset_number, 'user_id' => $selected_user_id);
+
+        $ok = $wpdb->update(
+            $table,
+            $row,
+            $where
+        );
+
+        if ($ok === false) {
+            return new WP_Error('db_insert_error', 'Could not insert preset', ['status' => 500]);
+        }
     }
 
-    return ['success' => true, 'array_id' => (int) $wpdb->insert_id];
+    $updated_data =  $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE user_id = %d", $row["user_id"]));
+
+    foreach ($updated_data as $row) {
+        if (isset($row->params_json)) {
+            $row->params_json = json_decode($row->params_json, true);
+        }
+    }
+
+    return ['row' => $contains_preset_number, 'success' => true, 'array_id' => (int) $wpdb->insert_id, 'updated_data' => $updated_data];
 }
 
 function multiplier_get_freq_array(WP_REST_Request $request)
@@ -397,23 +428,23 @@ function multiplier_get_index_array(WP_REST_Request $request)
 }
 
 /* ------------------------------------------------------------
- * PRESETS
+ * GLOBAL PRESETS
  * ------------------------------------------------------------ */
 function multiplier_create_preset(WP_REST_Request $request)
 {
     global $wpdb;
     $table = $wpdb->prefix . 'multiplier_preset';
 
-    $d = $request->get_json_params();
+    $data = $request->get_json_params();
 
     $row = [
-        'name'            => isset($d['name']) ? sanitize_text_field($d['name']) : null,
-        'preset_number'   => isset($d['preset_number']) ? sanitize_text_field($d['preset_number']) : null,
-        'index_array_id'  => isset($d['index_array_id']) ? intval($d['index_array_id']) : null,
-        'freq_array_id'   => isset($d['freq_array_id']) ? intval($d['freq_array_id']) : null,
+        'name'            => isset($data['name']) ? sanitize_text_field($data['name']) : null,
+        'preset_number'   => isset($data['preset_number']) ? sanitize_text_field($data['preset_number']) : null,
+        'index_array_id'  => isset($data['index_array_id']) ? intval($data['index_array_id']) : null,
+        'freq_array_id'   => isset($data['freq_array_id']) ? intval($data['freq_array_id']) : null,
 
-        'params_json'     => isset($d['params_json']) ? wp_json_encode($d['params_json']) : null,
-        'user_id'         => isset($d['user_id']) ? intval($d['user_id']) : multiplier_current_user_id(),
+        'params_json'     => isset($data['params_json']) ? wp_json_encode($data['params_json']) : null,
+        'user_id'         => isset($data['user_id']) ? intval($data['user_id']) : multiplier_current_user_id(),
     ];
 
     foreach ($row as $k => $v) {
@@ -430,10 +461,9 @@ function multiplier_create_preset(WP_REST_Request $request)
     $have_same_preset_num = $contains_preset_number->preset_number == $selected_preset_number;
     $have_same_user = $contains_preset_number->user_id == $selected_user_id;
     $have_same_preset_num_and_different_user = $have_same_preset_num && !$have_same_user;
-    $check = 0;
 
     if (!$have_same_preset_num) {
-        $check = 1;
+
         $ok = $wpdb->insert(
             $table,
             $row,
@@ -444,7 +474,6 @@ function multiplier_create_preset(WP_REST_Request $request)
             return new WP_Error('db_insert_error', 'Could not insert preset', ['status' => 500]);
         }
     } else if ($have_same_preset_num) {
-        $check = 2;
 
         $where = array('preset_number' => $selected_preset_number, 'user_id' => $selected_user_id);
 
@@ -467,7 +496,7 @@ function multiplier_create_preset(WP_REST_Request $request)
         }
     }
 
-    return ['row' => $contains_preset_number, 'check' => $check, 'success' => true, 'array_id' => (int) $wpdb->insert_id, 'updated_data' => $updated_data];
+    return ['row' => $contains_preset_number, 'success' => true, 'array_id' => (int) $wpdb->insert_id, 'updated_data' => $updated_data];
 }
 
 function multiplier_get_presets(WP_REST_Request $request)
