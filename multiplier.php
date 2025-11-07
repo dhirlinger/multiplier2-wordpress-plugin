@@ -176,6 +176,11 @@ add_action('rest_api_init', function () {
         'callback' => 'multiplier_get_freq_array',
         'permission_callback' => '__return_true',
     ]);
+    register_rest_route('multiplier-api/v1', '/freq-arrays/delete/(?P<id>\d+)', [
+        'methods' => 'DELETE',
+        'callback' => 'multiplier_delete_freq_array',
+        'permission_callback' => 'multiplier_verify_nonce_permission',
+    ]);
 
     // Index arrays
     register_rest_route('multiplier-api/v1', '/index-arrays', [
@@ -389,7 +394,7 @@ function multiplier_delete_freq_array(WP_REST_Request $request)
         $table = $wpdb->prefix . 'multiplier_freq_array';
         $id = intval($request['id']);
 
-        $wpdb->delete($table, array('preset_id' => $id), array('%d'));
+        $wpdb->delete($table, array('array_id' => $id), array('%d'));
 
         $updated_data =  $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE user_id = %d", $current_user_id));
 
