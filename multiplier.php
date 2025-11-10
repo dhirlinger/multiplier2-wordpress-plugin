@@ -326,6 +326,7 @@ function multiplier_create_freq_array(WP_REST_Request $request)
         'preset_number'   => isset($data['preset_number']) ? sanitize_text_field($data['preset_number']) : null,
         'base_freq'  => isset($data['base_freq']) ? floatval($data['base_freq']) : null,
         'multiplier'   => isset($data['multiplier']) ? floatval($data['multiplier']) : null,
+        'params_json'     => isset($data['params_json']) ? wp_json_encode($data['params_json']) : null,
         'user_id'         => isset($data['user_id']) ? intval($data['user_id']) : multiplier_current_user_id(),
     ];
 
@@ -347,7 +348,7 @@ function multiplier_create_freq_array(WP_REST_Request $request)
         $ok = $wpdb->insert(
             $table,
             $row,
-            ['%s', '%d', '%f', '%f', '%d']
+            ['%s', '%d', '%f', '%f', '%s', '%d']
         );
 
         if ($ok === false) {
@@ -384,7 +385,14 @@ function multiplier_get_freq_array(WP_REST_Request $request)
     global $wpdb;
     $table = $wpdb->prefix . 'multiplier_freq_array';
     $id = intval($request['id']);
-    return $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE user_id = %d", $id));
+    $results = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE user_id = %d", $id));
+    // decode JSON for output 
+    foreach ($results as $row) {
+        if (isset($row->params_json)) {
+            $row->params_json = json_decode($row->params_json, true);
+        }
+    }
+    return $results;
 }
 
 function multiplier_delete_freq_array(WP_REST_Request $request)
@@ -471,7 +479,6 @@ function multiplier_create_preset(WP_REST_Request $request)
         'preset_number'   => isset($data['preset_number']) ? sanitize_text_field($data['preset_number']) : null,
         'index_array_id'  => isset($data['index_array_id']) ? intval($data['index_array_id']) : null,
         'freq_array_id'   => isset($data['freq_array_id']) ? intval($data['freq_array_id']) : null,
-
         'params_json'     => isset($data['params_json']) ? wp_json_encode($data['params_json']) : null,
         'user_id'         => isset($data['user_id']) ? intval($data['user_id']) : multiplier_current_user_id(),
     ];
