@@ -47,7 +47,7 @@ add_action('wp_enqueue_scripts', function () {
  * Database Setup (Activation)
  * ------------------------------------------------------------ */
 register_activation_hook(__FILE__, 'multiplier_setup_table');
-register_activation_hook(__FILE__, 'multiplier_install_data');
+//register_activation_hook(__FILE__, 'multiplier_install_data');
 
 function multiplier_setup_table()
 {
