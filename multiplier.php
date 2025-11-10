@@ -75,6 +75,7 @@ function multiplier_setup_table()
             name VARCHAR(50) NOT NULL,
             base_freq DOUBLE,
             multiplier DOUBLE,
+            params_json   JSON NOT NULL,
             user_id smallint(9) NOT NULL,
             PRIMARY KEY  (array_id),
             KEY  (user_id)
@@ -109,27 +110,27 @@ function multiplier_setup_table()
     }
 }
 
-function multiplier_install_data()
-{
-    global $wpdb;
+// function multiplier_install_data()
+// {
+//     global $wpdb;
 
-    $freq_array_table = $wpdb->prefix . 'multiplier_freq_array';
+//     $freq_array_table = $wpdb->prefix . 'multiplier_freq_array';
 
-    $existing = $wpdb->get_var("SELECT array_id FROM $freq_array_table WHERE array_id = 1");
-    if (!$existing) {
-        $wpdb->insert(
-            $freq_array_table,
-            [
-                'array_id'   => 1,
-                'base_freq'  => 110,
-                'multiplier' => 2,
-                'name' => 'DEFAULT',
-                'user_id'    => 1,
-            ],
-            ['%d', '%f', '%f', '%s', '%d']
-        );
-    }
-}
+//     $existing = $wpdb->get_var("SELECT array_id FROM $freq_array_table WHERE array_id = 1");
+//     if (!$existing) {
+//         $wpdb->insert(
+//             $freq_array_table,
+//             [
+//                 'array_id'   => 1,
+//                 'base_freq'  => 110,
+//                 'multiplier' => 2,
+//                 'name' => 'DEFAULT',
+//                 'user_id'    => 1,
+//             ],
+//             ['%d', '%f', '%f', '%s', '%d']
+//         );
+//     }
+// }
 
 /* ------------------------------------------------------------
  * REST Helpers: Nonce + Current User
