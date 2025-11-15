@@ -47,7 +47,6 @@ add_action('wp_enqueue_scripts', function () {
  * Database Setup (Activation)
  * ------------------------------------------------------------ */
 register_activation_hook(__FILE__, 'multiplier_setup_table');
-//register_activation_hook(__FILE__, 'multiplier_install_data');
 
 function multiplier_setup_table()
 {
@@ -86,12 +85,8 @@ function multiplier_setup_table()
             preset_id mediumint(9) NOT NULL AUTO_INCREMENT,
             name VARCHAR(25),
             params_json   JSON NOT NULL,
-            index_array_id mediumint(9)  NOT NULL,
-            freq_array_id mediumint(9)  NOT NULL,
             user_id smallint(9) NOT NULL,
             PRIMARY KEY (preset_id),
-            KEY  index_array_id (index_array_id),
-            KEY  freq_array_id (freq_array_id),
             KEY  user_id (user_id)
         ) $charset_collate;
     ";
@@ -100,37 +95,15 @@ function multiplier_setup_table()
     dbDelta($sql);
 
     // Add FKs only once
-    $exists = $wpdb->get_var($wpdb->prepare("SELECT COUNT(1) FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND CONSTRAINT_NAME = 'fk_preset_index'", $preset_table));
-    if (!$exists) {
-        $wpdb->query("ALTER TABLE $preset_table ADD CONSTRAINT fk_preset_index FOREIGN KEY (index_array_id) REFERENCES $index_array_table(array_id)");
-    }
-    $exists = $wpdb->get_var($wpdb->prepare("SELECT COUNT(1) FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND CONSTRAINT_NAME = 'fk_preset_freq'", $preset_table));
-    if (!$exists) {
-        $wpdb->query("ALTER TABLE $preset_table ADD CONSTRAINT fk_preset_freq FOREIGN KEY (freq_array_id) REFERENCES $freq_array_table(array_id)");
-    }
+    // $exists = $wpdb->get_var($wpdb->prepare("SELECT COUNT(1) FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND CONSTRAINT_NAME = 'fk_preset_index'", $preset_table));
+    // if (!$exists) {
+    //     $wpdb->query("ALTER TABLE $preset_table ADD CONSTRAINT fk_preset_index FOREIGN KEY (index_array_id) REFERENCES $index_array_table(array_id)");
+    // }
+    // $exists = $wpdb->get_var($wpdb->prepare("SELECT COUNT(1) FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND CONSTRAINT_NAME = 'fk_preset_freq'", $preset_table));
+    // if (!$exists) {
+    //     $wpdb->query("ALTER TABLE $preset_table ADD CONSTRAINT fk_preset_freq FOREIGN KEY (freq_array_id) REFERENCES $freq_array_table(array_id)");
+    // }
 }
-
-// function multiplier_install_data()
-// {
-//     global $wpdb;
-
-//     $freq_array_table = $wpdb->prefix . 'multiplier_freq_array';
-
-//     $existing = $wpdb->get_var("SELECT array_id FROM $freq_array_table WHERE array_id = 1");
-//     if (!$existing) {
-//         $wpdb->insert(
-//             $freq_array_table,
-//             [
-//                 'array_id'   => 1,
-//                 'base_freq'  => 110,
-//                 'multiplier' => 2,
-//                 'name' => 'DEFAULT',
-//                 'user_id'    => 1,
-//             ],
-//             ['%d', '%f', '%f', '%s', '%d']
-//         );
-//     }
-// }
 
 /* ------------------------------------------------------------
  * REST Helpers: Nonce + Current User
@@ -477,8 +450,6 @@ function multiplier_create_preset(WP_REST_Request $request)
     $row = [
         'name'            => isset($data['name']) ? sanitize_text_field($data['name']) : null,
         'preset_number'   => isset($data['preset_number']) ? sanitize_text_field($data['preset_number']) : null,
-        'index_array_id'  => isset($data['index_array_id']) ? intval($data['index_array_id']) : null,
-        'freq_array_id'   => isset($data['freq_array_id']) ? intval($data['freq_array_id']) : null,
         'params_json'     => isset($data['params_json']) ? wp_json_encode($data['params_json']) : null,
         'user_id'         => isset($data['user_id']) ? intval($data['user_id']) : multiplier_current_user_id(),
     ];
@@ -503,7 +474,7 @@ function multiplier_create_preset(WP_REST_Request $request)
         $ok = $wpdb->insert(
             $table,
             $row,
-            ['%s', '%d', '%d', '%d', '%s', '%d']
+            ['%s', '%d', '%s', '%d']
         );
 
         if ($ok === false) {
@@ -531,8 +502,8 @@ function multiplier_create_preset(WP_REST_Request $request)
             $row->params_json = json_decode($row->params_json, true);
         }
     }
-
-    return ['row' => $contains_preset_number, 'success' => true, 'array_id' => (int) $wpdb->insert_id, 'updated_data' => $updated_data];
+    //'array_id' => (int) $wpdb->insert_id,
+    return ['row' => $contains_preset_number, 'success' => true, 'updated_data' => $updated_data];
 }
 
 function multiplier_get_presets(WP_REST_Request $request)
