@@ -85,6 +85,8 @@ function multiplier_setup_table()
             preset_id mediumint(9) NOT NULL AUTO_INCREMENT,
             name VARCHAR(25),
             params_json   JSON NOT NULL,
+            freq_json   JSON NOT NULL,
+            index_array VARCHAR(25) NOT NULL,
             user_id smallint(9) NOT NULL,
             PRIMARY KEY (preset_id),
             KEY  user_id (user_id)
@@ -479,6 +481,8 @@ function multiplier_create_preset(WP_REST_Request $request)
         'name'            => isset($data['name']) ? sanitize_text_field($data['name']) : null,
         'preset_number'   => isset($data['preset_number']) ? sanitize_text_field($data['preset_number']) : null,
         'params_json'     => isset($data['params_json']) ? wp_json_encode($data['params_json']) : null,
+        'freq_json'     => isset($data['freq_json']) ? wp_json_encode($data['freq_json']) : null,
+        'index_array'     => isset($data['index_array']) ? sanitize_text_field($data['index_array']) : null,
         'user_id'         => isset($data['user_id']) ? intval($data['user_id']) : multiplier_current_user_id(),
     ];
 
@@ -502,7 +506,7 @@ function multiplier_create_preset(WP_REST_Request $request)
         $ok = $wpdb->insert(
             $table,
             $row,
-            ['%s', '%d', '%s', '%d']
+            ['%s', '%d', '%s', '%s', '%s', '%d']
         );
 
         if ($ok === false) {
@@ -529,6 +533,9 @@ function multiplier_create_preset(WP_REST_Request $request)
         if (isset($row->params_json)) {
             $row->params_json = json_decode($row->params_json, true);
         }
+        if (isset($row->freq_json)) {
+            $row->freq_json = json_decode($row->freq_json, true);
+        }
     }
     //'array_id' => (int) $wpdb->insert_id,
     return ['row' => $contains_preset_number, 'success' => true, 'updated_data' => $updated_data];
@@ -544,6 +551,9 @@ function multiplier_get_presets(WP_REST_Request $request)
     foreach ($results as $row) {
         if (isset($row->params_json)) {
             $row->params_json = json_decode($row->params_json, true);
+        }
+        if (isset($row->freq_json)) {
+            $row->freq_json = json_decode($row->freq_json, true);
         }
     }
     return $results;
@@ -564,6 +574,9 @@ function multiplier_delete_preset(WP_REST_Request $request)
         foreach ($updated_data as $row) {
             if (isset($row->params_json)) {
                 $row->params_json = json_decode($row->params_json, true);
+            }
+            if (isset($row->freq_json)) {
+                $row->freq_json = json_decode($row->freq_json, true);
             }
         }
 
