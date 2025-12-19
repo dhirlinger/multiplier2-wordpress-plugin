@@ -319,7 +319,6 @@ function multiplier_create_freq_array(WP_REST_Request $request)
     $selected_preset_number = $row["preset_number"];
     $selected_user_id = $row['user_id'];
     $contains_preset_number = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE preset_number = %d AND user_id = %d", $selected_preset_number, $selected_user_id));
-    $selected_user_id = $row['user_id'];
 
     $have_same_preset_num = $contains_preset_number->preset_number == $selected_preset_number;
     $have_same_user = $contains_preset_number->user_id == $selected_user_id;
@@ -417,19 +416,42 @@ function multiplier_create_index_array(WP_REST_Request $request)
         return new WP_Error('missing_data', 'Required fields: index_array, name, preset_number, user_id', ['status' => 400]);
     }
 
-    $ok = $wpdb->insert(
-        $table,
-        [
-            'index_array' => $index_array,
-            'name'  => $name,
-            'preset_number' => $preset_number,
-            'user_id'     => $user_id,
-        ],
-        ['%s', '%s', '%d', '%d']
-    );
+    $contains_preset_number = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE preset_number = %d AND user_id = %d", $preset_number, $user_id));
+    $have_same_preset_num = $contains_preset_number->preset_number == $preset_number;
 
-    if ($ok === false) {
-        return new WP_Error('db_insert_error', 'Could not insert index array', ['status' => 500]);
+    if (!$have_same_preset_num) {
+
+        $ok = $wpdb->insert(
+            $table,
+            [
+                'index_array' => $index_array,
+                'name'  => $name,
+                'preset_number' => $preset_number,
+                'user_id'     => $user_id,
+            ],
+            ['%s', '%s', '%d', '%d']
+        );
+
+        if ($ok === false) {
+            return new WP_Error('db_insert_error', 'Could not insert index array', ['status' => 500]);
+        }
+    } else if ($have_same_preset_num) {
+        $where = array('preset_number' => $preset_number, 'user_id' => $user_id);
+
+        $ok = $wpdb->update(
+            $table,
+            [
+                'index_array' => $index_array,
+                'name'  => $name,
+                'preset_number' => $preset_number,
+                'user_id'     => $user_id,
+            ],
+            $where
+        );
+
+        if ($ok === false) {
+            return new WP_Error('db_insert_error', 'Could not insert index array', ['status' => 500]);
+        }
     }
 
     $updated_data =  $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE user_id = %d", $user_id));
