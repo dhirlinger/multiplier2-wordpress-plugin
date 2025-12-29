@@ -55,6 +55,7 @@ function multiplier_setup_table()
     $index_array_table = $wpdb->prefix . 'multiplier_index_array';
     $freq_array_table  = $wpdb->prefix . 'multiplier_freq_array';
     $preset_table      = $wpdb->prefix . 'multiplier_preset';
+    $midi_table        = $wpdb->prefix . 'multiplier_midi_mappings';
     $charset_collate   = $wpdb->get_charset_collate();
 
     $sql = "
@@ -65,7 +66,8 @@ function multiplier_setup_table()
             index_array VARCHAR(25) NOT NULL,
             user_id smallint(9) NOT NULL,
             PRIMARY KEY  (array_id),
-            KEY  (user_id)
+            KEY  (user_id),
+            UNIQUE KEY user_preset (user_id, preset_number)
         ) $charset_collate;
 
         CREATE TABLE $freq_array_table (
@@ -77,7 +79,8 @@ function multiplier_setup_table()
             params_json   JSON NOT NULL,
             user_id smallint(9) NOT NULL,
             PRIMARY KEY  (array_id),
-            KEY  (user_id)
+            KEY  (user_id),
+            UNIQUE KEY user_preset (user_id, preset_number)
         ) $charset_collate;
 
         CREATE TABLE $preset_table (
@@ -89,8 +92,22 @@ function multiplier_setup_table()
             index_array VARCHAR(25) NOT NULL,
             user_id smallint(9) NOT NULL,
             PRIMARY KEY (preset_id),
-            KEY  user_id (user_id)
+            KEY  user_id (user_id),
+            UNIQUE KEY user_preset (user_id, preset_number)
         ) $charset_collate;
+
+        CREATE TABLE $midi_table (
+            preset_number   SMALLINT UNSIGNED NOT NULL,
+            name VARCHAR(25),
+            mapping_id mediumint(9) NOT NULL AUTO_INCREMENT,
+            user_id smallint(9) NOT NULL,
+            mapping_data  JSON NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY  (mapping_id),
+            KEY  user_id (user_id),
+            UNIQUE KEY user_preset (user_id, preset_number)
+) $charset_collate;
     ";
 
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -175,7 +192,7 @@ add_action('rest_api_init', function () {
         'permission_callback' => 'multiplier_verify_nonce_permission',
     ]);
 
-    // Presets
+    // Global Presets
     register_rest_route('multiplier-api/v1', '/presets', [
         'methods'  => 'POST',
         'callback' => 'multiplier_create_preset',
@@ -189,6 +206,22 @@ add_action('rest_api_init', function () {
     register_rest_route('multiplier-api/v1', '/presets/delete/(?P<id>\d+)', [
         'methods' => 'DELETE',
         'callback' => 'multiplier_delete_preset',
+        'permission_callback' => 'multiplier_verify_nonce_permission',
+    ]);
+    // Midi Presets
+    register_rest_route('multiplier-api/v1', '/midi', [
+        'methods' => 'POST',
+        'callback' => 'multiplier_create_midi',
+        'permission_callback' => 'multiplier_verify_nonce_permission',
+    ]);
+    register_rest_route('multiplier-api/v1', '/midi/(?P<id>\d+)', [
+        'methods' => 'GET',
+        'callback' => 'multiplier_get_midi',
+        'permission_callback' => '__return_true',
+    ]);
+    register_rest_route('multiplier-api/v1', '/midi/delete/(?P<id>\d+)', [
+        'methods' => 'DELETE',
+        'callback' => 'multiplier_delete_midi',
         'permission_callback' => 'multiplier_verify_nonce_permission',
     ]);
 });
@@ -319,9 +352,7 @@ function multiplier_create_freq_array(WP_REST_Request $request)
     $selected_preset_number = $row["preset_number"];
     $selected_user_id = $row['user_id'];
     $contains_preset_number = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE preset_number = %d AND user_id = %d", $selected_preset_number, $selected_user_id));
-
-    $have_same_preset_num = $contains_preset_number->preset_number == $selected_preset_number;
-    $have_same_user = $contains_preset_number->user_id == $selected_user_id;
+    $have_same_preset_num = $contains_preset_number && $contains_preset_number->preset_number == $selected_preset_number;
 
     if (!$have_same_preset_num) {
         $ok = $wpdb->insert(
@@ -417,7 +448,7 @@ function multiplier_create_index_array(WP_REST_Request $request)
     }
 
     $contains_preset_number = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE preset_number = %d AND user_id = %d", $preset_number, $user_id));
-    $have_same_preset_num = $contains_preset_number->preset_number == $preset_number;
+    $have_same_preset_num = $contains_preset_number && $contains_preset_number->preset_number == $preset_number;
 
     if (!$have_same_preset_num) {
 
@@ -517,11 +548,8 @@ function multiplier_create_preset(WP_REST_Request $request)
     $selected_preset_number = $row["preset_number"];
     $selected_user_id = $row['user_id'];
     $contains_preset_number = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE preset_number = %d AND user_id = %d", $selected_preset_number, $selected_user_id));
-    $selected_user_id = $row['user_id'];
+    $have_same_preset_num = $contains_preset_number && $contains_preset_number->preset_number == $selected_preset_number;
 
-    $have_same_preset_num = $contains_preset_number->preset_number == $selected_preset_number;
-    $have_same_user = $contains_preset_number->user_id == $selected_user_id;
-    $have_same_preset_num_and_different_user = $have_same_preset_num && !$have_same_user;
 
     if (!$have_same_preset_num) {
 
@@ -605,5 +633,108 @@ function multiplier_delete_preset(WP_REST_Request $request)
         return ['success' => true, 'updated_data' => $updated_data];
     }
 
+    return ['user_logged_in' => false];
+}
+
+/* ------------------------------------------------------------
+ * MIDI PRESETS
+ * ------------------------------------------------------------ */
+function multiplier_create_midi(WP_REST_Request $request)
+{
+    global $wpdb;
+    $table = $wpdb->prefix . 'multiplier_midi_mappings';
+
+    $data = $request->get_json_params();
+
+    $row = [
+        'preset_number' => isset($data['preset_number']) ? sanitize_text_field($data['preset_number']) : null,
+        'name'          => isset($data['name']) ? sanitize_text_field($data['name']) : null,
+        'user_id'       => isset($data['user_id']) ? intval($data['user_id']) : multiplier_current_user_id(),
+        'mapping_data'  => isset($data['mapping_data']) ? wp_json_encode($data['mapping_data']) : null,
+    ];
+
+    foreach ($row as $k => $v) {
+        if ($v === null) {
+            return new WP_Error('missing_data', 'Missing field: ' . $k, ['status' => 400]);
+        }
+    }
+
+    $selected_preset_number = $row["preset_number"];
+    $selected_user_id = $row['user_id'];
+    $contains_preset_number = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE preset_number = %d AND user_id = %d", $selected_preset_number, $selected_user_id));
+    $have_same_preset_num = $contains_preset_number && $contains_preset_number->preset_number == $selected_preset_number;
+
+    if (!$have_same_preset_num) {
+        $ok = $wpdb->insert(
+            $table,
+            $row,
+            ['%d', '%s', '%d', '%s']
+        );
+
+        if ($ok === false) {
+            return new WP_Error('db_insert_error', 'Could not insert midi mapping', ['status' => 500]);
+        }
+    } else if ($have_same_preset_num) {
+
+        $where = array('preset_number' => $selected_preset_number, 'user_id' => $selected_user_id);
+
+        $ok = $wpdb->update(
+            $table,
+            $row,
+            $where
+        );
+
+        if ($ok === false) {
+            return new WP_Error('db_insert_error', 'Could not insert midi preset', ['status' => 500]);
+        }
+    }
+
+    $updated_data =  $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE user_id = %d", $row["user_id"]));
+
+    foreach ($updated_data as $row) {
+        if (isset($row->mapping_data)) {
+            $row->mapping_data = json_decode($row->mapping_data, true);
+        }
+    }
+
+
+    return ['row' => $contains_preset_number, 'success' => true, 'mapping_id' => (int) $wpdb->insert_id, 'updated_data' => $updated_data];
+}
+
+function multiplier_get_midi(WP_REST_Request $request)
+{
+    global $wpdb;
+    $table = $wpdb->prefix . 'multiplier_midi_mappings';
+    $id = intval($request['id']);
+    $results = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE user_id = %d", $id));
+
+    foreach ($results as $row) {
+        if (isset($row->mapping_data)) {
+            $row->mapping_data = json_decode($row->mapping_data, true);
+        }
+    }
+    return $results;
+}
+
+function multiplier_delete_midi(WP_REST_Request $request)
+{
+    if (is_user_logged_in()) {
+        $current_user_id = get_current_user_id();
+        global $wpdb;
+        $table = $wpdb->prefix . 'multiplier_midi_mappings';
+        $id = intval($request['id']);
+
+        $wpdb->delete($table, array('mapping_id' => $id), array('%d'));
+
+        $updated_data =  $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE user_id = %d", $current_user_id));
+
+        foreach ($updated_data as $row) {
+            if (isset($row->mapping_data)) {
+                $row->mapping_data = json_decode($row->mapping_data, true);
+            }
+        }
+
+        return ['success' => true, 'updated_data' => $updated_data];
+    }
     return ['user_logged_in' => false];
 }
