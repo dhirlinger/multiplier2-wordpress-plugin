@@ -40,6 +40,7 @@ add_action('wp_enqueue_scripts', function () {
     wp_localize_script('multiplier', 'MultiplierAPI', [
         'restUrl' => esc_url_raw(rest_url()),
         'nonce'   => wp_create_nonce('wp_rest'),
+        'patreonPostId' => get_the_ID(),
     ]);
 });
 
