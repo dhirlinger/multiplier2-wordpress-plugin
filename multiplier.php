@@ -151,7 +151,7 @@ add_action('rest_api_init', function () {
     register_rest_route('multiplier-api/v1', '/login-status', [
         'methods'  => 'GET',
         'callback' => 'multiplier_get_login_status',
-        'permission_callback' => 'multiplier_verify_nonce_permission',
+        'permission_callback' => '__return_true',  // was: 'multiplier_verify_nonce_permission'
     ]);
 
     // Freq arrays
