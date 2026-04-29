@@ -19,22 +19,52 @@ add_action('wp_enqueue_scripts', function () {
     $js  = plugin_dir_path(__FILE__) . 'multiplier.js';
     $css = plugin_dir_path(__FILE__) . 'multiplier.css';
 
-    // JS
-    wp_enqueue_script(
-        'multiplier',
-        plugin_dir_url(__FILE__) . 'multiplier.js',
-        [],
-        file_exists($js) ? filemtime($js) : null,
-        true
-    );
+    $is_prod = defined('MULTIPLIER_ENV') && MULTIPLIER_ENV === 'production';
+    $is_dev = defined('MULTIPLIER_ENV') && MULTIPLIER_ENV === 'development';
 
-    // CSS
-    wp_enqueue_style(
-        'multiplier-css',
-        plugin_dir_url(__FILE__) . 'multiplier.css',
-        [],
-        file_exists($css) ? filemtime($css) : null
-    );
+    // JS
+    if ($is_prod && is_page_template('template-multiplier.php')) {
+
+        wp_enqueue_script(
+            'multiplier',
+            plugin_dir_url(__FILE__) . 'multiplier.js',
+            [],
+            file_exists($js) ? filemtime($js) : null,
+            true
+        );
+
+        // CSS
+        wp_enqueue_style(
+            'multiplier-css',
+            plugin_dir_url(__FILE__) . 'multiplier.css',
+            [],
+            file_exists($css) ? filemtime($css) : null
+        );
+        wp_enqueue_style(
+            'foundation-w-multiplier-css',
+            get_template_directory_uri() . '/assets/css/foundation-w-multiplier.css',
+            [],
+            file_exists($css) ? filemtime($css) : null
+        );
+    }
+
+    if (!$is_dev) {
+        wp_enqueue_script(
+            'multiplier',
+            plugin_dir_url(__FILE__) . 'multiplier.js',
+            [],
+            file_exists($js) ? filemtime($js) : null,
+            true
+        );
+
+        // CSS
+        wp_enqueue_style(
+            'multiplier-css',
+            plugin_dir_url(__FILE__) . 'multiplier.css',
+            [],
+            file_exists($css) ? filemtime($css) : null
+        );
+    }
 
     // Localize REST root + nonce for frontend usage
     wp_localize_script('multiplier', 'MultiplierAPI', [
