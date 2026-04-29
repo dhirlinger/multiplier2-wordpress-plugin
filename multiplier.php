@@ -48,7 +48,7 @@ add_action('wp_enqueue_scripts', function () {
         );
     }
 
-    if (!$is_dev) {
+    if ($is_dev || !defined('MULTIPLIER_ENV')) {
         wp_enqueue_script(
             'multiplier',
             plugin_dir_url(__FILE__) . 'multiplier.js',
